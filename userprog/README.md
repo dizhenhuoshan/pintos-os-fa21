@@ -4,6 +4,7 @@ Table of Contents
 -----------------
 
 * [Pintos Lab2: User Programs](#pintos-lab2-user-programs)
+   * [Table of Contents](#table-of-contents)
    * [Background](#background)
    * [Source Files](#source-files)
    * [Using the File System](#using-the-file-system)
@@ -39,6 +40,7 @@ You will be working out of the `"userprog"` directory for this assignment, but y
 
 You might find it useful to go back and reread how to run the tests (see [section 1.2.1 Testing](https://web.stanford.edu/class/cs140/projects/pintos/pintos_1.html#SEC8)).
 
+* * *
 
 ## Background
 Up to now, all of the code you have run under Pintos has been part of the operating system kernel. This means, for example, that all the test code from the last assignment ran as part of the kernel, with full access to privileged parts of the system. Once we start running user programs on top of the operating system, this is no longer true. This project deals with the consequences.
@@ -47,6 +49,7 @@ We allow more than one process to run at a time. Each process has one thread (mu
 
 In the previous project, we compiled our test code directly into your kernel, so we had to require certain specific function interfaces within the kernel. From now on, we will test your operating system by running user programs. This gives you much greater freedom. You must make sure that the user program interface meets the specifications described here, but given that constraint you are free to restructure or rewrite kernel code however you wish.
 
+* * *
 
 ## Source Files
 The easiest way to get an overview of the programming you will be doing is to simply go over each part you'll be working with. In `"userprog"`, you'll find a small number of files, but here is where the bulk of your work will be:
@@ -68,6 +71,8 @@ The easiest way to get an overview of the programming you will be doing is to si
 
 - `"tss.c"` & `"tss.h"`
     - The Task-State Segment (TSS) is used for 80x86 architectural task switching. Pintos uses the TSS only for switching stacks when a user process enters an interrupt handler, as does Linux. You should not need to modify these files for any of the projects. You can read the code if you're interested in how the TSS works.
+
+* * *
 
 ## Using the File System
 You will need to interface to the file system code for this project, because user programs are loaded from the file system and many of the system calls you must implement deal with the file system. However, the focus of this project is not the file system, so we have provided a simple but complete file system in the `"filesys"` directory. You will want to look over the `"filesys.h"` and `"file.h"` interfaces to understand how to use the file system, and especially its many limitations.
@@ -122,6 +127,9 @@ pintos --filesys-size=2 -p ../../examples/echo -a echo -- -f -q run 'echo x'
 
 You can delete a file from the Pintos file system using the `rm file` kernel action, e.g. `pintos -q rm file`. Also, `ls` lists the files in the file system and `cat file` prints a file's contents to the display.
 
+
+* * *
+
 ## How User Programs Work
 
 Pintos can run normal C programs, as long as they fit into memory and use only the system calls you implement. Notably, `malloc()` cannot be implemented because none of the system calls required for this project allow for memory allocation. Pintos also can't run programs that use floating point operations, since the kernel doesn't save and restore the processor's floating-point unit when switching threads.
@@ -132,6 +140,7 @@ Pintos can load ELF executables with the loader provided for you in `"userprog/p
 
 You should realize immediately that, until you copy a test program to the simulated file system, Pintos will be unable to do useful work. You won't be able to do interesting things until you copy a variety of programs to the file system. You might want to create a clean reference file system disk and copy that over whenever you trash your `"filesys.dsk"` beyond a useful state, which may happen occasionally while debugging.
 
+* * *
 
 ## Virtual Memory Layout
 
@@ -143,6 +152,7 @@ Kernel virtual memory is global. It is always mapped the same way, regardless of
 
 A user program can only access its own user virtual memory. An attempt to access kernel virtual memory causes a page fault, handled by `page_fault()` in `"userprog/exception.c"`, and the process will be terminated. Kernel threads can access both kernel virtual memory and, if a user process is running, the user virtual memory of the running process. However, even in the kernel, an attempt to access memory at an unmapped user virtual address will cause a page fault.
 
+* * *
 
 ### Typical Memory Layout
 
@@ -184,6 +194,7 @@ The linker sets the layout of a user program in memory, as directed by a "linker
 
 To view the layout of a particular executable, run `objdump` (80x86) or `i386-elf-objdump` (SPARC) with the `-p` option.
 
+* * *
 
 ## Suggested Order of Implementation
 
@@ -215,10 +226,13 @@ For now, you may simply wish to change
 
 After the above are implemented, user processes should work minimally. At the very least, they can write to the console and exit correctly. You can then refine your implementation so that some of the tests start to pass.
 
+* * *
 
 ## Requirements
 
-- ### Process Termination Messages
+* * *
+
+1.  ### Process Termination Messages
 
     Whenever a user process terminates, because it called `exit` or for any other reason, print the process's name and exit code, formatted as if printed by `printf ("%s: exit(%d)\n", ...);`. The name printed should be the full name passed to `process_execute()`, omitting command-line arguments. Do not print these messages when a kernel thread that is not a user process terminates, or when the `halt` system call is invoked. The message is optional when a process fails to load.
     
@@ -228,7 +242,9 @@ After the above are implemented, user processes should work minimally. At the ve
 
     Aside from this, don't print any other messages that Pintos as provided doesn't     already print. You may find extra messages useful during debugging, but they       will confuse the grading scripts and thus lower your score.
 
-- ### Argument Passing
+* * *
+
+2.  ### Argument Passing
 
     Currently, process_execute() does not support passing arguments to new processes. Implement this functionality, by extending process_execute() so that instead of simply taking a program file name as its argument, it divides it into words at spaces. The first word is the program name, the second word is the first argument, and so on. That is, process_execute("grep foo bar") should run grep passing two arguments foo and bar.
 
@@ -241,8 +257,9 @@ After the above are implemented, user processes should work minimally. At the ve
     
     See section [Program Startup Details](), for information on exactly how you need to set up the stack.
 
+* * *
 
-- ### Accessing User Memory
+3. ### Accessing User Memory
 
     As part of a system call, the kernel must often access memory through pointers provided by a user program. The kernel must be very careful about doing so, because the user can pass a null pointer, a pointer to unmapped virtual memory, or a pointer to kernel virtual address space (above `PHYS_BASE`). All of these types of invalid pointers must be rejected without harm to the kernel or other running processes, by terminating the offending process and freeing its resources.
 
@@ -283,8 +300,9 @@ After the above are implemented, user processes should work minimally. At the ve
     ```
     Each of these functions assumes that the user address has already been verified to be below `PHYS_BASE`. They also assume that you've modified `page_fault()` so that a page fault in the kernel merely sets `eax` to `0xffffffff` and copies its former value into `eip`.
 
+* * *
 
--  ### System Calls
+4.  ### System Calls
     #### **Exercise 2.4.1**
     Implement the system call handler in userprog/syscall.c. The skeleton implementation we provide "handles" system calls by terminating the process. It will need to retrieve the system call number, then any system call arguments, and carry out appropriate actions.
 
@@ -388,116 +406,142 @@ After the above are implemented, user processes should work minimally. At the ve
 
     See section [System Call Details](#System-Call-Details), for details on how system calls work.
 
+* * *
 
-- ### Denying Writes to Executables
+5. ### Denying Writes to Executables
 
     #### **Exercise 2.5**
     
     Add code to deny writes to files in use as executables. Many OSes do this because of the unpredictable results if a process tried to run code that was in the midst of being changed on disk. This is especially important once virtual memory is implemented in project 3, but it can't hurt even now.
     You can use `file_deny_write()` to prevent writes to an open file. Calling `file_allow_write()` on the file will re-enable them (unless the file is denied writes by another opener). Closing a file will also re-enable writes. Thus, to deny writes to a process's executable, you must keep it open as long as the process is still running.
 
-- ### Design Document
+* * *
+
+6. ### Design Document
 
     Finish the `"userprog_design_doc.txt"` and submit it via Canvas.
 
+* * *
+
 ## FAQs
+
+**How much code will I need to write?**
+
+Here's a summary of our reference solution, produced by the `diffstat` program. The final row gives total lines inserted and deleted; a changed line counts as both an insertion and a deletion.
+
+The reference solution represents just one possible solution. Many other solutions are also possible and many of those differ greatly from the reference solution. Some excellent solutions may not modify all the files modified by the reference solution, and some may modify files not modified by the reference solution.
+
+ 	
+    threads/thread.c     |   13 
+    threads/thread.h     |   26 +
+    userprog/exception.c |    8 
+    userprog/process.c   |  247 ++++++++++++++--
+    userprog/syscall.c   |  468 ++++++++++++++++++++++++++++++-
+    userprog/syscall.h   |    1 
+    6 files changed, 725 insertions(+), 38 deletions(-)
+
 
 **The kernel always panics when I run `pintos -p file -- -q`.**
     
-        Did you format the file system (with `pintos -f`)?
-    
-        Is your file name too long? The file system limits file names to 14 characters. A command like "pintos -p ../../examples/echo -- -q" will exceed the limit. Use "pintos -p ../../examples/echo -a echo -- -q" to put the file under the name echo instead.
-    
-        Is the file system full?
-    
-        Does the file system already contain 16 files? The base Pintos file system has a 16-file limit.
-    
-        The file system may be so fragmented that there's not enough contiguous space for your file.
+Did you format the file system (with `pintos -f`)?
+
+Is your file name too long? The file system limits file names to 14 characters. A command like pintos `-p ../../examples/echo -- -q` will exceed the limit. Use `pintos -p ../../examples/echo -a echo -- -q` to put the file under the name echo instead.
+
+Is the file system full?
+
+Does the file system already contain 16 files? The base Pintos file system has a 16-file limit.
+
+The file system may be so fragmented that there's not enough contiguous space for your file.
 
 **When I run `pintos -p ../file --`, file isn't copied.**
 
-        Files are written under the name you refer to them, by default, so in this case the file copied in would be named ../file. You probably want to run 
-    "pintos -p ../file -a file --" instead.
-    
-        You can list the files in your file system with "pintos -q ls".
+Files are written under the name you refer to them, by default, so in this case the file copied in would be named "../file". You probably want to run 
+`pintos -p ../file -a file --` instead.
+
+You can list the files in your file system with `pintos -q ls`.
 
 **All my user programs die with page faults.**
 
-        This will happen if you haven't implemented argument passing (or haven't done so correctly). The basic C library for user programs tries to read argc and argv off the stack. If the stack isn't properly set up, this causes a page fault.
+This will happen if you haven't implemented argument passing (or haven't done so correctly). The basic C library for user programs tries to read argc and argv off the stack. If the stack isn't properly set up, this causes a page fault.
 
 **All my user programs die with `system call`!**
 
-        You'll have to implement system calls before you see anything else. Every reasonable program tries to make at least one system call ("exit()") and most programs make more than that. Notably, "printf()" invokes the write system call. The default system call handler just prints system call! and terminates the program. Until then, you can use "hex_dump()" to convince yourself that argument passing is implemented correctly 
-        
+You'll have to implement system calls before you see anything else. Every reasonable program tries to make at least one system call (`exit()`) and most programs make more than that. Notably, `printf()` invokes the write system call. The default system call handler just prints system call! and terminates the program. Until then, you can use `hex_dump()` to convince yourself that argument passing is implemented correctly 
+
 (see section [Program Startup Details](#Program-Startup-Details)).
 
 **How can I disassemble user programs?**
 
-        The "objdump" (80x86) or "i386-elf-objdump" (SPARC) utility can disassemble entire user programs or object files. Invoke it as objdump -d file. 
+The `objdump` (80x86) or `i386-elf-objdump` (SPARC) utility can disassemble entire user programs or object files. Invoke it as objdump -d file. 
 
 You can use GDB's disassemble command to disassemble individual functions (see section [E.5 GDB](https://web.stanford.edu/class/cs140/projects/pintos/pintos_10.html#SEC151)).
 
 **Why do many C include files not work in Pintos programs?
 Can I use `libfoo` in my Pintos programs?**
 
-        The C library we provide is very limited. It does not include many of the features that are expected of a real operating system's C library. The C library must be built specifically for the operating system (and architecture), since it must make system calls for I/O and memory allocation. (Not all functions do, of course, but usually the library is compiled as a unit.)
-        
-        The chances are good that the library you want uses parts of the C library that Pintos doesn't implement. It will probably take at least some porting effort to make it work under Pintos. Notably, the Pintos user program C library does not have a "malloc()" implementation.
+The C library we provide is very limited. It does not include many of the features that are expected of a real operating system's C library. The C library must be built specifically for the operating system (and architecture), since it must make system calls for I/O and memory allocation. (Not all functions do, of course, but usually the library is compiled as a unit.)
+
+The chances are good that the library you want uses parts of the C library that Pintos doesn't implement. It will probably take at least some porting effort to make it work under Pintos. Notably, the Pintos user program C library does not have a `malloc()` implementation.
 
 **How do I compile new user programs?**
-    
-        Modify "src/examples/Makefile", then run make.
+
+Modify `"src/examples/Makefile"`, then run make.
 
 **Can I run user programs under a debugger?**
 
-        Yes, with some limitations. 
+Yes, with some limitations. 
 See section [E.5 GDB](https://web.stanford.edu/class/cs140/projects/pintos/pintos_10.html#SEC151).
 
 **What's the difference between tid_t and pid_t?**
        
-        A "tid_t" identifies a kernel thread, which may have a user process running in it (if created with "process_execute()") or not (if created with "thread_create()"). It is a data type used only in the kernel.
-        
-        A "pid_t" identifies a user process. It is used by user processes and the kernel in the "exec" and wait system calls.
-        
-        You can choose whatever suitable types you like for tid_t and pid_t. By default, they're both "int". You can make them a one-to-one mapping, so that the same values in both identify the same process, or you can use a more complex mapping. It's up to you.
+A *tid_t* identifies a kernel thread, which may have a user process running in it (if created with `process_execute()`) or not (if created with `thread_create()`). It is a data type used only in the kernel.
+
+A *pid_t* identifies a user process. It is used by user processes and the kernel in the `exec` and wait system calls.
+
+You can choose whatever suitable types you like for *tid_t* and *pid_t*. By default, they're both "int". You can make them a one-to-one mapping, so that the same values in both identify the same process, or you can use a more complex mapping. It's up to you.
+
+* * *
 
 ### Argument Passing FAQs
 
 **Isn't the top of stack in kernel virtual memory?**
 
-        The top of stack is at PHYS_BASE, typically 0xc0000000, which is also where kernel virtual memory starts. But before the processor pushes data on the stack, it decrements the stack pointer. Thus, the first (4-byte) value pushed on the stack will be at address 0xbffffffc.
+The top of stack is at PHYS_BASE, typically 0xc0000000, which is also where kernel virtual memory starts. But before the processor pushes data on the stack, it decrements the stack pointer. Thus, the first (4-byte) value pushed on the stack will be at address 0xbffffffc.
 
 **Is `PHYS_BASE` fixed?**
         
-        No. You should be able to support PHYS_BASE values that are any multiple of 0x10000000 from 0x80000000 to 0xf0000000, simply via recompilation.
+No. You should be able to support PHYS_BASE values that are any multiple of 0x10000000 from 0x80000000 to 0xf0000000, simply via recompilation.
 
+* * *
 
 ### System Calls FAQs
 
 **Can I just cast a `struct file *` to get a file descriptor?
 Can I just cast a `struct thread *` to a `pid_t`?**
 
-        You will have to make these design decisions yourself. Most operating systems do distinguish between file descriptors (or pids) and the addresses of their kernel data structures. You might want to give some thought as to why they do so before committing yourself.
+You will have to make these design decisions yourself. Most operating systems do distinguish between file descriptors (or pids) and the addresses of their kernel data structures. You might want to give some thought as to why they do so before committing yourself.
 
 **Can I set a maximum number of open files per process?**
         
-        It is better not to set an arbitrary limit. You may impose a limit of 128 open files per process, if necessary.
+It is better not to set an arbitrary limit. You may impose a limit of 128 open files per process, if necessary.
 
 <span id = "rm_opened_file"></span>
 
 **What happens when an open file is removed?**
 
-        You should implement the standard Unix semantics for files. That is, when a file is removed any process which has a file descriptor for that file may continue to use that descriptor. This means that they can read and write from the file. The file will not have a name, and no other processes will be able to open it, but it will continue to exist until all file descriptors referring to the file are closed or the machine shuts down.
+You should implement the standard Unix semantics for files. That is, when a file is removed any process which has a file descriptor for that file may continue to use that descriptor. This means that they can read and write from the file. The file will not have a name, and no other processes will be able to open it, but it will continue to exist until all file descriptors referring to the file are closed or the machine shuts down.
 
 **How can I run user programs that need more than 4 kB stack space?**
 
-        You may modify the stack setup code to allocate more than one page of stack space for each process. In the next project, you will implement a better solution.
+You may modify the stack setup code to allocate more than one page of stack space for each process. In the next project, you will implement a better solution.
 
 **What should happen if an `exec` fails midway through loading?**
 
-        exec should return -1 if the child process fails to load for any reason. This includes the case where the load fails part of the way through the process (e.g. where it runs out of memory in the multi-oom test). Therefore, the parent process cannot return from the exec system call until it is established whether the load was successful or not. The child must communicate this information to its parent using appropriate synchronization, such as a semaphore to ensure that the information is communicated without race conditions.
+exec should return -1 if the child process fails to load for any reason. This includes the case where the load fails part of the way through the process (e.g. where it runs out of memory in the multi-oom test). Therefore, the parent process cannot return from the exec system call until it is established whether the load was successful or not. The child must communicate this information to its parent using appropriate synchronization, such as a semaphore to ensure that the information is communicated without race conditions.
         
 see [section A.3.2 Semaphores](https://web.stanford.edu/class/cs140/projects/pintos/pintos_6.html#SEC102).
+
+* * *
 
 <span id="80x86-Calling-Convention"></span>
 
@@ -531,6 +575,8 @@ Consider a function `f()` that takes three `int` arguments. This diagram shows a
                                  +----------------+
 
 <span id="Program-Startup-Details"></span>
+
+* * *
 
 ### Program Startup Details
 
@@ -580,6 +626,8 @@ You may find the non-standard `hex_dump()` function, declared in `<stdio.h>`, us
 
 <span id="System-Call-Details"></span>
 
+* * *
+
 ### System Call Details
 
 The first project already dealt with one way that the operating system can regain control from a user program: interrupts from timers and I/O devices. These are "external" interrupts, because they are caused by entities outside the CPU (see [section A.4.3 External Interrupt Handling](https://web.stanford.edu/class/cs140/projects/pintos/pintos_6.html#SEC110)).
@@ -596,4 +644,4 @@ You should try to avoid writing large amounts of repetitive code for implementin
 
 
 --------------
-Thanks to the doc from [Ryan Huang](https://www.cs.jhu.edu/~huang/cs318/fall17/project/project2.html#Removing_an_Open_File) and [Stanford Pintos Project](https://web.stanford.edu/class/cs140/projects/pintos/pintos.html)
+Thanks to the doc from [Ryan Huang](https://www.cs.jhu.edu/~huang/cs318/fall17/project/project2.html) and [Stanford Pintos Project](https://web.stanford.edu/class/cs140/projects/pintos/pintos.html)

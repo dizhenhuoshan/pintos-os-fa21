@@ -1,10 +1,42 @@
 # Pintos Lab3:  Virtual Memory
 
+Table of Contents
+-----------------
+
+* [Pintos Lab3:  Virtual Memory](#pintos-lab3--virtual-memory)
+   * [Source Files](#source-files)
+   * [Memory Terminology](#memory-terminology)
+      * [Pages](#pages)
+      * [Frames](#frames)
+      * [Page Tables](#page-tables)
+      * [Swap Slots](#swap-slots)
+   * [Resource Management Overview](#resource-management-overview)
+   * [Managing the Supplemental Page Table](#managing-the-supplemental-page-table)
+   * [Managing the Frame Table](#managing-the-frame-table)
+      * [Accessed and Dirty Bits](#accessed-and-dirty-bits)
+   * [Managing the Swap Table](#managing-the-swap-table)
+   * [Managing Memory Mapped Files](#managing-memory-mapped-files)
+   * [Suggested Order of Implementation](#suggested-order-of-implementation)
+   * [Requirements](#requirements)
+      * [Paging](#paging)
+         * [<strong>Exercise 3.1.1</strong>](#exercise-311)
+         * [<strong>Exercise 3.1.2</strong>](#exercise-312)
+      * [Stack Growth](#stack-growth)
+         * [<strong>Exercise 3.2</strong>](#exercise-32)
+      * [Memory Mapped Files](#memory-mapped-files)
+         * [<strong>Exercise 3.3</strong>](#exercise-33)
+      * [Accessing User Memory](#accessing-user-memory)
+         * [<strong>Exercise 3.4</strong>](#exercise-34)
+      * [Design Document](#design-document)
+   * [FAQ](#faq)
+
 By now you should have some familiarity with the inner workings of Pintos. Your OS can properly handle multiple threads of execution with proper synchronization, and can load multiple user programs at once. However, the number and size of programs that can run is limited by the machine's main memory size. In this assignment, you will remove that limitation.
 
 You will build this assignment on top of the last one. Test programs from project 2 should also work with project 3. You should take care to fix any bugs in your project 2 submission before you start work on project 3, because those bugs will most likely cause the same problems in project 3.
 
 You will continue to handle Pintos disks and file systems the same way you did in the previous assignment (see [section 3.1.2 Using the File System](https://web.stanford.edu/class/cs140/projects/pintos/pintos_3.html#SEC35)).
+
+* * *
 
 ## Source Files
 
@@ -16,9 +48,12 @@ You will probably be encountering just a few files for the first time:
 
 - Provides sector-based read and write access to block device. You will use this interface to access the swap partition as a block device.
 
+* * *
+
 ## Memory Terminology
 Careful definitions are needed to keep discussion of virtual memory from being confusing. Thus, we begin by presenting some terminology for memory and storage. Some of these terms should be familiar from project 2 (see [section 3.1.4 Virtual Memory Layout](https://web.stanford.edu/class/cs140/projects/pintos/pintos_3.html#SEC37)), but much of it is new.
 
+* * *
 
 ### Pages
 A *page*, sometimes called a *virtual page*, is a continuous region of virtual memory 4,096 bytes (the *page size*) in length. A page must be *page-aligned*, that is, start on a virtual address evenly divisible by the page size. Thus, a 32-bit virtual address can be divided into a 20-bit *page number* and a 12-bit *page offset* (or just *offset*), like this:
@@ -34,6 +69,7 @@ Each process has an independent set of *user (virtual)* pages, which are those p
 
 Pintos provides several useful functions for working with virtual addresses. See [section A.6 Virtual Addresses](https://web.stanford.edu/class/cs140/projects/pintos/pintos_6.html#SEC114), for details.
 
+* * *
 
 ### Frames
 A *frame*, sometimes called a *physical frame* or a *page frame*, is a continuous region of physical memory. Like pages, frames must be page-size and page-aligned. Thus, a 32-bit physical address can be divided into a 20-bit *frame number* and a 12-bit *frame offset* (or just *offset*), like this:
@@ -49,6 +85,7 @@ The 80x86 doesn't provide any way to directly access memory at a physical addres
 
 Pintos provides functions for translating between physical addresses and kernel virtual addresses. See [section A.6 Virtual Addresses](https://web.stanford.edu/class/cs140/projects/pintos/pintos_6.html#SEC114), for details.
 
+* * *
 
 ### Page Tables
 In Pintos, a *page table* is a data structure that the CPU uses to translate a virtual address to a physical address, that is, from a page to a frame. The page table format is dictated by the 80x86 architecture. Pintos provides page table management code in `"pagedir.c"` (see [section A.7 Page Table](https://web.stanford.edu/class/cs140/projects/pintos/pintos_6.html#SEC115)).
@@ -66,6 +103,7 @@ The diagram below illustrates the relationship between pages and frames. The vir
     Virt Addr      |                       Phys Addr       ^
                     \_____________________________________/
 
+* * *
 
 ### Swap Slots
 A *swap slot* is a continuous, page-size region of disk space in the swap partition. Although hardware limitations dictating the placement of slots are looser than for pages and frames, swap slots should be page-aligned because there is no downside in doing so.
@@ -106,6 +144,8 @@ Although more complex data structures may yield performance or other benefits, t
 
 <span id="Managing-the-Supplemental-Page-Table"></span>
 
+* * *
+
 ## Managing the Supplemental Page Table
 
 The *supplemental page table* supplements the page table with additional data about each page. It is needed because of the limitations imposed by the page table's format. Such a data structure is often called a "page table" also; we add the word "supplemental" to reduce confusion.
@@ -132,6 +172,8 @@ The most important user of the supplemental page table is the page fault handler
 
 <span id="Managing-the-Frame-Table"></span>
 
+* * *
+
 ## Managing the Frame Table
 
 The *frame table* contains one entry for each frame that contains a user page. Each entry in the frame table contains a pointer to the page, if any, that currently occupies it, and other data of your choice. The frame table allows Pintos to efficiently implement an eviction policy, by choosing a page to evict when no frames are free.
@@ -154,6 +196,7 @@ The process of eviction comprises roughly the following steps:
 
 The evicted frame may then be used to store a different page.
 
+* * *
 
 ### Accessed and Dirty Bits
 80x86 hardware provides some assistance for implementing page replacement algorithms, through a pair of bits in the page table entry (PTE) for each page. On any read or write to a page, the CPU sets the *accessed bit* to 1 in the page's PTE, and on any write, the CPU sets the *dirty bit* to 1. The CPU never resets these bits to 0, but the OS may do so.
@@ -168,6 +211,8 @@ See [section A.7.3 Accessed and Dirty Bits](https://web.stanford.edu/class/cs140
 
 <span id="Managing-the-Swap-Table"></span>
 
+* * *
+
 ## Managing the Swap Table
 
 The swap table tracks in-use and free swap slots. It should allow picking an unused swap slot for evicting a page from its frame to the swap partition. It should allow freeing a swap slot when its page is read back or the process whose page was swapped is terminated.
@@ -178,6 +223,7 @@ Swap slots should be allocated lazily, that is, only when they are actually requ
 
 Free a swap slot when its contents are read back into a frame.
 
+* * *
 
 ## Managing Memory Mapped Files
 
@@ -207,6 +253,7 @@ A similar program with full error handling is included as `"mcat.c"` in the exam
 
 Your submission must be able to track what memory is used by memory mapped files. This is necessary to properly handle page faults in the mapped regions and to ensure that mapped files do not overlap any other segments within the process.
 
+* * *
 
 ## Suggested Order of Implementation
 
@@ -227,10 +274,12 @@ From here, you can implement stack growth, mapped files, and page reclamation on
 
 The next step is to implement eviction (see [section 4.1.5 Managing the Frame Table](#managing-the-frame-table)). Initially you could choose the page to evict randomly. At this point, you need to consider how to manage accessed and dirty bits and aliasing of user and kernel pages. Synchronization is also a concern: how do you deal with it if process A faults on a page whose frame process B is in the process of evicting? Finally, implement a eviction strategy such as the clock algorithm.
 
+* * *
 
 ## Requirements
 This assignment is an open-ended design problem. We are going to say as little as possible about how to do things. Instead we will focus on what functionality we require your OS to support. We will expect you to come up with a design that makes sense. You will have the freedom to choose how to handle page faults, how to organize the swap partition, how to implement paging, etc.
 
+* * *
 
 1. ### Paging
 
@@ -256,6 +305,8 @@ This assignment is an open-ended design problem. We are going to say as little a
 
     - You can use the `-ul` kernel command-line option to limit the size of the user pool, which makes it easy to test your VM implementation with various user memory sizes. For example, `pintos --swap-size=2 --filesys-size=2 -p ../../examples/echo -a echo -- -ul=4 -f -q run 'echo hello world'` will test Pintos with 4 page frames for user program.
 
+* * *
+
 2. ### Stack Growth
 
     #### **Exercise 3.2**
@@ -274,6 +325,7 @@ This assignment is an open-ended design problem. We are going to say as little a
 
     All stack pages should be candidates for eviction. An evicted stack page should be written to swap.
 
+* * *
 
 3. ### Memory Mapped Files
     #### **Exercise 3.3**
@@ -304,6 +356,8 @@ This assignment is an open-ended design problem. We are going to say as little a
 
     If two or more processes map the same file, there is no requirement that they see consistent data. Unix handles this by making the two mappings share the same physical page, but the `mmap` system call also has an argument allowing the client to specify whether the page is shared or private (i.e. copy-on-write).
 
+* * *
+
 4. ### Accessing User Memory
 
     You will need to adapt your code to access user memory (see [section 3.1.5 Accessing User Memory](https://web.stanford.edu/class/cs140/projects/pintos/pintos_3.html#SEC39)) while handling a system call. Just as user processes may access pages whose content is currently in a file or in swap space, so can they pass addresses that refer to such non-resident pages to system calls. Moreover, unless your kernel takes measures to prevent this, a page may be evicted from its frame even while it is being accessed by kernel code. If kernel code accesses such non-resident user pages, a page fault will result.
@@ -315,40 +369,76 @@ This assignment is an open-ended design problem. We are going to say as little a
 
     Preventing such page faults requires cooperation between the code within which the access occurs and your page eviction code. For instance, you could extend your frame table to record when a page contained in a frame must not be evicted. (This is also referred to as "pinning" or "locking" the page in its frame.) Pinning restricts your page replacement algorithm's choices when looking for pages to evict, so be sure to pin pages no longer than necessary, and avoid pinning pages when it is not necessary.
 
+* * *
+
+5. ### Design Document
+
+    Finish the `"vm_design_doc.txt"` and submit it via Canvas.
+
+* * *
 
 ## FAQ
 
+**How much code will I need to write?**
+
+Here's a summary of our reference solution, produced by the `diffstat` program. The final row gives total lines inserted and deleted; a changed line counts as both an insertion and a deletion.
+
+This summary is relative to the Pintos base code, but the reference solution for project 3 starts from the reference solution to project 2. See section [3.4 FAQ](https://web.stanford.edu/class/cs140/projects/pintos/pintos_3.html#SEC47), for the summary of project 2.
+
+The reference solution represents just one possible solution. Many other solutions are also possible and many of those differ greatly from the reference solution. Some excellent solutions may not modify all the files modified by the reference solution, and some may modify files not modified by the reference solution.
+
+ 	
+    Makefile.build       |    4
+    devices/timer.c      |   42 ++
+    threads/init.c       |    5
+    threads/interrupt.c  |    2
+    threads/thread.c     |   31 +
+    threads/thread.h     |   37 +-
+    userprog/exception.c |   12
+    userprog/pagedir.c   |   10
+    userprog/process.c   |  319 +++++++++++++-----
+    userprog/syscall.c   |  545 ++++++++++++++++++++++++++++++-
+    userprog/syscall.h   |    1
+    vm/frame.c           |  162 +++++++++
+    vm/frame.h           |   23 +
+    vm/page.c            |  297 ++++++++++++++++
+    vm/page.h            |   50 ++
+    vm/swap.c            |   85 ++++
+    vm/swap.h            |   11
+    17 files changed, 1532 insertions(+), 104 deletions(-)
+
+
 **Do we need a working Project 2 to implement Project 3?**
     
-    Yes.
+Yes.
 
 <span id="extra_credit"></span>
 
 **What extra credit is available?**
 
-    You may implement sharing: when multiple processes are created that use the same executable file, share read-only pages among those processes instead of creating separate copies of read-only segments for each process. If you carefully designed your data structures, sharing of read-only pages should not make this part significantly harder.
+You may implement sharing: when multiple processes are created that use the same executable file, share read-only pages among those processes instead of creating separate copies of read-only segments for each process. If you carefully designed your data structures, sharing of read-only pages should not make this part significantly harder.
 
 **How do we resume a process after we have handled a page fault?**
 
-    Returning from "page_fault()" resumes the current user process . It will then retry the instruction to which the instruction pointer points.
+Returning from `page_fault()` resumes the current user process . It will then retry the instruction to which the instruction pointer points.
 
 see [section A.4.2 Internal Interrupt Handling](https://web.stanford.edu/class/cs140/projects/pintos/pintos_6.html#SEC109).
 
 **Why do user processes sometimes fault above the stack pointer?**
 
-    You might notice that, in the stack growth tests, the user program faults on an address that is above the user program's current stack pointer, even though the PUSH and PUSHA instructions would cause faults 4 and 32 bytes below the current stack pointer.
+You might notice that, in the stack growth tests, the user program faults on an address that is above the user program's current stack pointer, even though the PUSH and PUSHA instructions would cause faults 4 and 32 bytes below the current stack pointer.
 
-    This is not unusual. The "PUSH" and "PUSHA" instructions are not the only instructions that can trigger user stack growth. For instance, a user program may allocate stack space by decrementing the stack pointer using a "SUB $n, %esp" instruction, and then use a "MOV ..., m(%esp)" instruction to write to a stack location within the allocated space that is m bytes above the current stack pointer. Such accesses are perfectly valid, and your kernel must grow the user program's stack to allow those accesses to succeed.
+This is not unusual. The "PUSH" and "PUSHA" instructions are not the only instructions that can trigger user stack growth. For instance, a user program may allocate stack space by decrementing the stack pointer using a "SUB $n, %esp" instruction, and then use a "MOV ..., m(%esp)" instruction to write to a stack location within the allocated space that is m bytes above the current stack pointer. Such accesses are perfectly valid, and your kernel must grow the user program's stack to allow those accesses to succeed.
 
 **Does the virtual memory system need to support data segment growth?**
 
-    No. The size of the data segment is determined by the linker. We still have no dynamic allocation in Pintos (although it is possible to "fake" it at the user level by using memory-mapped files). Supporting data segment growth should add little additional complexity to a well-designed system.
+No. The size of the data segment is determined by the linker. We still have no dynamic allocation in Pintos (although it is possible to "fake" it at the user level by using memory-mapped files). Supporting data segment growth should add little additional complexity to a well-designed system.
 
 <span id="Why_PAL_USER"></span>
 
 **Why should I use PAL_USER for allocating page frames?**
     
-    Passing "PAL_USER" to "palloc_get_page()" causes it to allocate memory from the user pool, instead of the main kernel pool. Running out of pages in the user pool just causes user programs to page, but running out of pages in the kernel pool will cause many failures because so many kernel functions need to obtain memory. You can layer some other allocator on top of "palloc_get_page()" if you like, but it should be the underlying mechanism.
+Passing `PAL_USER` to `palloc_get_page()` causes it to allocate memory from the user pool, instead of the main kernel pool. Running out of pages in the user pool just causes user programs to page, but running out of pages in the kernel pool will cause many failures because so many kernel functions need to obtain memory. You can layer some other allocator on top of `palloc_get_page()` if you like, but it should be the underlying mechanism.
 
 --------------
-Thanks to the doc from [Ryan Huang](https://www.cs.jhu.edu/~huang/cs318/fall17/project/project2.html#Removing_an_Open_File) and [Stanford Pintos Project](https://web.stanford.edu/class/cs140/projects/pintos/pintos.html)
+Thanks to the doc from [Ryan Huang](https://www.cs.jhu.edu/~huang/cs318/fall17/project/project3.html) and [Stanford Pintos Project](https://web.stanford.edu/class/cs140/projects/pintos/pintos.html)
